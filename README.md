@@ -90,10 +90,28 @@ Use one of the following `opts.lsp` configurations.
 Installing PHPactor as a project dependency can conflict with the versions
 locked by an existing application. Install the
 [standalone PHAR](https://phpactor.readthedocs.io/en/master/usage/standalone.html)
-in the DDEV web image instead. Current PHPactor releases require PHP 8.2 or
-newer.
+in the DDEV web container instead. Current PHPactor releases require PHP 8.2
+or newer.
 
-Create `.ddev/web-build/Dockerfile.phpactor`:
+To make PHPactor available in every DDEV project, install it once using global
+DDEV home additions:
+
+```sh
+mkdir -p ~/.ddev/homeadditions/bin
+curl -fL https://github.com/phpactor/phpactor/releases/latest/download/phpactor.phar \
+  -o ~/.ddev/homeadditions/bin/phpactor
+chmod 0755 ~/.ddev/homeadditions/bin/phpactor
+```
+
+Restart each running project once and verify the installation:
+
+```sh
+ddev restart
+ddev exec phpactor status
+```
+
+Alternatively, install a pinned PHPactor version per project. Create
+`.ddev/web-build/Dockerfile.phpactor`:
 
 ```dockerfile
 ARG PHPACTOR_VERSION=2026.07.22.0
@@ -104,7 +122,7 @@ RUN curl -fsSL \
     && chmod 0755 /usr/local/bin/phpactor
 ```
 
-Rebuild the web container and verify the installation:
+Rebuild the web container and verify the project-local installation:
 
 ```sh
 ddev restart
