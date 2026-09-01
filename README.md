@@ -140,6 +140,10 @@ lsp = {
 }
 ```
 
+Specify the full path (inside the container) to phpactor of nvim cannot find it.
+
+
+
 Phpactor does not load project-local configuration until the project is
 [trusted](https://phpactor.readthedocs.io/en/master/usage/configuration.html#trusting-configuration).
 Trust the DDEV project after reviewing its `.phpactor.json` or `.phpactor.yml`:
