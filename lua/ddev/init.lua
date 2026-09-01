@@ -20,12 +20,13 @@ local defaults = {
 }
 
 function M.setup(opts)
-  local text = vim.tbl_extend("force", defaults, (opts or {}).translations or {})
+  opts = opts or {}
+  local text = vim.tbl_extend("force", defaults, opts.translations or {})
   local Terminal = require("toggleterm.terminal").Terminal
   local uv = vim.uv or vim.loop
 
-  local function ddev_root()
-    local path = vim.api.nvim_buf_get_name(0)
+  local function ddev_root(bufnr, quiet)
+    local path = vim.api.nvim_buf_get_name(bufnr or 0)
 
     if path == "" then
       path = uv.cwd()
@@ -40,7 +41,9 @@ function M.setup(opts)
     })[1]
 
     if not ddev_dir or not uv.fs_stat(ddev_dir .. "/config.yaml") then
-      vim.notify(text.no_project, vim.log.levels.WARN)
+      if not quiet then
+        vim.notify(text.no_project, vim.log.levels.WARN)
+      end
       return
     end
 
@@ -133,6 +136,10 @@ function M.setup(opts)
       end, commands)
     end,
   })
+
+  if opts.lsp then
+    require("ddev.lsp").setup(opts.lsp, ddev_root)
+  end
 end
 
 return M

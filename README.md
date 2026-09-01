@@ -53,3 +53,127 @@ All displayed text is English by default. Override only the strings you need:
   },
 }
 ```
+
+## DDEV Language Servers
+
+The optional LSP bridge uses DDEV to manage the project, resolves its web
+container, and runs one language server there through an interactive Docker
+stdio connection. Paths are mapped between the host project and
+`/var/www/html`. The project must contain the selected server executable.
+
+```lua
+{
+  "42lizard/ddev.nvim",
+  dependencies = { "akinsho/toggleterm.nvim" },
+  ft = "php", -- Load the plugin before the PHP FileType event.
+  opts = {
+    lsp = {
+      enabled = true,
+      server = "phpactor",
+    },
+  },
+}
+```
+
+Available presets are:
+
+| Server | Command inside DDEV |
+| --- | --- |
+| `phpactor` | `vendor/bin/phpactor language-server` |
+| `psalm` | `vendor/bin/psalm-language-server` |
+| `intelephense` | `node_modules/.bin/intelephense --stdio` |
+
+Use one of the following `opts.lsp` configurations.
+
+### PHPactor
+
+Installing PHPactor as a project dependency can conflict with the versions
+locked by an existing application. Install the
+[standalone PHAR](https://phpactor.readthedocs.io/en/master/usage/standalone.html)
+in the DDEV web image instead. Current PHPactor releases require PHP 8.2 or
+newer.
+
+Create `.ddev/web-build/Dockerfile.phpactor`:
+
+```dockerfile
+ARG PHPACTOR_VERSION=2026.07.22.0
+
+RUN curl -fsSL \
+    "https://github.com/phpactor/phpactor/releases/download/${PHPACTOR_VERSION}/phpactor.phar" \
+    -o /usr/local/bin/phpactor \
+    && chmod 0755 /usr/local/bin/phpactor
+```
+
+Rebuild the web container and verify the installation:
+
+```sh
+ddev restart
+ddev exec phpactor status
+```
+
+Select the container-wide executable explicitly:
+
+```lua
+lsp = {
+  enabled = true,
+  server = "phpactor",
+  auto_start = true,
+  cmd = { "phpactor", "language-server" },
+}
+```
+
+Phpactor does not load project-local configuration until the project is
+[trusted](https://phpactor.readthedocs.io/en/master/usage/configuration.html#trusting-configuration).
+Trust the DDEV project after reviewing its `.phpactor.json` or `.phpactor.yml`:
+
+```sh
+ddev exec --raw -- phpactor config:trust --trust --working-dir=/var/www/html
+```
+
+The trust setting may need to be repeated after rebuilding the container. For
+development environments that only open trusted repositories, the check can
+instead be disabled by adding `config` to the `lsp` table:
+
+```lua
+config = {
+  init_options = {
+    ["language_server.enable_trust_check"] = false,
+  },
+}
+```
+
+### Psalm
+
+Install it with `ddev composer require --dev vimeo/psalm`:
+
+```lua
+lsp = {
+  enabled = true,
+  server = "psalm",
+  auto_start = true,
+}
+```
+
+### Intelephense
+
+Install it with `ddev npm install --save-dev intelephense`:
+
+```lua
+lsp = {
+  enabled = true,
+  server = "intelephense",
+  auto_start = true,
+  container_root = "/var/www/html",
+  config = {
+    init_options = { storagePath = "/tmp/intelephense" },
+  },
+}
+```
+
+Only one preset runs per project. Use `cmd` to override its executable and
+arguments. Native Neovim LSP options belong in `config`; `container_root`
+defaults to `/var/www/html`.
+
+By default, a stopped DDEV project produces a warning. Set `auto_start = true`
+to run `ddev start -y` before attaching. Use `:DdevLspStart` to retry and
+`:DdevLspRestart` after restarting the container.
